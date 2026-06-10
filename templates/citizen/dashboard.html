@@ -1,0 +1,80 @@
+{% extends 'base.html' %}
+{% block title %}My Dashboard – GovQueue{% endblock %}
+{% block content %}
+<div class="with-sidebar">
+  <div class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-lbl">Citizen</div>
+      <a href="/citizen" class="sidebar-item active">🏠 Dashboard</a>
+      <a href="/citizen/book" class="sidebar-item">📋 Book Queue</a>
+      <a href="/citizen/bookings" class="sidebar-item">📄 My Bookings</a>
+      <a href="/citizen/track" class="sidebar-item">🔍 Track Queue</a>
+      <a href="/citizen/profile" class="sidebar-item">👤 Profile</a>
+    </div>
+  </div>
+  <div class="main-area">
+    <div class="page-header">
+      <h2>Welcome, {{ user.full_name }} 👋</h2>
+      <p>Manage your queue bookings from here.</p>
+    </div>
+
+    {% if notifs %}
+    <div class="alert alert-info">
+      🔔 <strong>{{ notifs|length }} new notification(s):</strong>
+      {% for n in notifs %} {{ n.message }}{% if not loop.last %} · {% endif %}{% endfor %}
+      <form method="POST" action="/notifications/read" style="display:inline;margin-left:8px">
+        <button class="btn btn-sm btn-secondary" style="padding:2px 8px;font-size:11px">Mark read</button>
+      </form>
+    </div>
+    {% endif %}
+
+    {% if active %}
+    <div class="ticket-banner">
+      <div>
+        <div style="font-size:11px;opacity:.75;margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em">Active Ticket</div>
+        <div class="ticket-num">{{ active.queue_number }}</div>
+        <div class="ticket-meta">{{ active.service_name }} · {{ active.branch_name }}</div>
+        <div class="ticket-meta">{{ active.slot_date }} at {{ active.start_time }}</div>
+      </div>
+      <div style="text-align:right">
+        <div style="background:rgba(255,255,255,.15);border-radius:8px;padding:12px 20px">
+          <div style="font-size:28px;font-weight:700">{{ active.position }}</div>
+          <div style="font-size:11px;opacity:.75">position in queue</div>
+        </div>
+        <div style="margin-top:8px">
+          <span class="tag" style="background:rgba(255,255,255,.2);color:#fff">{{ active.status|title }}</span>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;margin-bottom:20px">
+      <a href="/citizen/track" class="btn btn-primary btn-sm">🔍 Track Live</a>
+      <a href="/citizen/bookings" class="btn btn-secondary btn-sm">Manage Booking</a>
+    </div>
+    {% else %}
+    <div class="card" style="text-align:center;padding:32px;margin-bottom:20px">
+      <div style="font-size:36px;margin-bottom:10px">📋</div>
+      <p style="color:#6b7280;margin-bottom:14px">No active booking. Book a slot now!</p>
+      <a href="/citizen/book" class="btn btn-primary">Book Queue Slot</a>
+    </div>
+    {% endif %}
+
+    <div class="grid-3">
+      <a href="/citizen/book" class="card" style="text-align:center;text-decoration:none">
+        <div style="font-size:28px;margin-bottom:8px">📋</div>
+        <div style="font-weight:600;font-size:13px">Book Queue</div>
+        <div class="muted">Reserve a slot</div>
+      </a>
+      <a href="/citizen/bookings" class="card" style="text-align:center;text-decoration:none">
+        <div style="font-size:28px;margin-bottom:8px">📄</div>
+        <div style="font-weight:600;font-size:13px">My Bookings</div>
+        <div class="muted">View & manage</div>
+      </a>
+      <a href="/citizen/profile" class="card" style="text-align:center;text-decoration:none">
+        <div style="font-size:28px;margin-bottom:8px">👤</div>
+        <div style="font-weight:600;font-size:13px">Profile</div>
+        <div class="muted">Edit your info</div>
+      </a>
+    </div>
+  </div>
+</div>
+{% endblock %}

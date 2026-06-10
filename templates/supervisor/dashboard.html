@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+{% block title %}Supervisor Dashboard – GovQueue{% endblock %}
+{% block content %}
+<div class="with-sidebar">
+  <div class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-lbl">Supervisor</div>
+      <a href="/supervisor" class="sidebar-item active">🏠 Overview</a>
+      <a href="/supervisor/windows" class="sidebar-item">🪟 Windows</a>
+      <a href="/logout" class="sidebar-item">🚪 Logout</a>
+    </div>
+  </div>
+  <div class="main-area">
+    <div class="page-header"><h2>Branch Overview</h2><p>Today — {{ today }}</p></div>
+
+    <div class="grid-4 mb-4">
+      <div class="stat-card">
+        <div class="stat-val">{{ windows|selectattr('status','equalto','open')|list|length }}</div>
+        <div class="stat-lbl">Open Windows</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val" style="color:#f59e0b">{{ stats.waiting or 0 }}</div>
+        <div class="stat-lbl">Waiting Citizens</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val" style="color:#1a56db">{{ stats.serving or 0 }}</div>
+        <div class="stat-lbl">Being Served</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val" style="color:#16a34a">{{ stats.completed or 0 }}</div>
+        <div class="stat-lbl">Completed Today</div>
+      </div>
+    </div>
+
+    <div class="card mb-4">
+      <div class="flex-between mb-4">
+        <div class="card-title" style="margin:0">Window Status</div>
+        <a href="/supervisor/windows" class="btn btn-secondary btn-sm">Manage Windows</a>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px">
+        {% for w in windows %}
+        <div style="border:1px solid {% if w.status == 'open' %}#86efac{% else %}#e5e7eb{% endif %};
+                    border-left:3px solid {% if w.status == 'open' %}#16a34a{% else %}#9ca3af{% endif %};
+                    border-radius:8px;padding:14px;background:{% if w.status == 'open' %}#f0fdf4{% else %}#f9fafb{% endif %}">
+          <div style="font-weight:600;font-size:13px">{{ w.label or 'Window ' ~ w.window_number }}</div>
+          <div class="muted">{{ w.service_name or 'No service' }}</div>
+          <div style="margin-top:6px">
+            <span class="tag {% if w.status == 'open' %}tag-green{% else %}tag-gray{% endif %}">{{ w.status|title }}</span>
+          </div>
+          {% if w.staff_name %}
+          <div class="muted" style="margin-top:4px">👤 {{ w.staff_name }}</div>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="stat-card">
+        <div class="stat-val" style="color:#dc2626">{{ stats.no_show or 0 }}</div>
+        <div class="stat-lbl">No-shows today</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val">{{ (stats.completed or 0) + (stats.waiting or 0) + (stats.serving or 0) }}</div>
+        <div class="stat-lbl">Total transactions</div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,99 @@
+{% extends 'base.html' %}
+{% block title %}Staff Dashboard – GovQueue{% endblock %}
+{% block content %}
+<div class="with-sidebar">
+  <div class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-lbl">Counter Staff</div>
+      <a href="/staff" class="sidebar-item active">🖥 Service Window</a>
+      <a href="/logout" class="sidebar-item">🚪 Logout</a>
+    </div>
+  </div>
+  <div class="main-area">
+    <div class="page-header"><h2>Service Window</h2><p>Today's service queue</p></div>
+
+    {% if win %}
+    <div class="alert alert-info">
+      Assigned to: <strong>{{ win.label or 'Window ' ~ win.window_number }}</strong> — {{ win.service_name }}
+      <span class="tag {% if win.status == 'open' %}tag-green{% else %}tag-red{% endif %}" style="margin-left:8px">{{ win.status|title }}</span>
+    </div>
+
+    <div class="grid-2 mb-4">
+      <!-- Currently Serving -->
+      <div class="card" style="text-align:center;padding:28px">
+        <div class="muted" style="margin-bottom:6px;text-transform:uppercase;font-size:11px;letter-spacing:.06em">Currently Serving</div>
+        {% if serving %}
+        <div style="font-size:52px;font-weight:700;color:#1a56db;line-height:1">{{ serving.queue_number }}</div>
+        <div style="margin-top:8px;font-weight:500">{{ serving.full_name }}</div>
+        <div style="margin-top:12px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+          <form method="POST" action="/staff/mark/{{ serving.id }}/completed">
+            <button class="btn btn-success btn-sm">✔ Completed</button>
+          </form>
+          <form method="POST" action="/staff/mark/{{ serving.id }}/skipped">
+            <button class="btn btn-warning btn-sm">⏭ Skipped</button>
+          </form>
+          <form method="POST" action="/staff/mark/{{ serving.id }}/no_show">
+            <button class="btn btn-secondary btn-sm">✗ No-show</button>
+          </form>
+        </div>
+        {% else %}
+        <div style="font-size:40px;margin:8px 0">—</div>
+        <div class="muted">No one currently serving</div>
+        {% endif %}
+
+        <div style="margin-top:16px;padding-top:16px;border-top:1px solid #e5e7eb">
+          <form method="POST" action="/staff/call_next">
+            <button class="btn btn-primary" style="width:100%;justify-content:center">📢 Call Next</button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Queue -->
+      <div class="card">
+        <div class="card-title">Waiting Queue ({{ queue|length }})</div>
+        {% if queue %}
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>#</th><th>Ticket</th><th>Name</th><th>Status</th></tr></thead>
+            <tbody>
+              {% for bk in queue[:8] %}
+              <tr>
+                <td>{{ loop.index }}</td>
+                <td style="font-weight:600;color:#1a56db">{{ bk.queue_number }}</td>
+                <td>{{ bk.full_name }}</td>
+                <td><span class="tag tag-amber">{{ bk.status|title }}</span></td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div style="text-align:center;padding:20px;color:#6b7280">Queue is empty 🎉</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="grid-3">
+      <div class="stat-card">
+        <div class="stat-val" style="color:#16a34a">{{ stats.completed or 0 }}</div>
+        <div class="stat-lbl">Completed today</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val" style="color:#f59e0b">{{ stats.skipped or 0 }}</div>
+        <div class="stat-lbl">Skipped</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val" style="color:#dc2626">{{ stats.no_show or 0 }}</div>
+        <div class="stat-lbl">No-shows</div>
+      </div>
+    </div>
+
+    {% else %}
+    <div class="alert alert-warning">
+      You have no active window assignment for today. Contact your branch supervisor.
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

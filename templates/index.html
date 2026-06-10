@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+{% block title %}GovQueue – Government Queue Platform{% endblock %}
+{% block content %}
+<div style="background:#1a56db;color:#fff;padding:48px 20px;text-align:center">
+  <h1 style="font-size:32px;font-weight:700;margin-bottom:8px">🏛 GovQueue</h1>
+  <p style="font-size:16px;opacity:.85;margin-bottom:24px">Skip the line — book your government service slot online</p>
+  {% if not session.user_id %}
+  <div style="display:flex;gap:12px;justify-content:center">
+    <a href="/register" class="btn btn-secondary">Register Now</a>
+    <a href="/login" class="btn" style="background:rgba(255,255,255,.15);color:#fff;border-color:rgba(255,255,255,.3)">Login</a>
+  </div>
+  {% else %}
+  <a href="/dashboard" class="btn btn-secondary">Go to Dashboard</a>
+  {% endif %}
+</div>
+
+<div class="container">
+  <div style="margin-bottom:24px">
+    <h2 style="font-size:18px;font-weight:600;margin-bottom:4px">Live Branch Status</h2>
+    <p class="muted">Current congestion and estimated wait times</p>
+  </div>
+
+  {% if congestion %}
+  <div class="grid-3 mb-4">
+    {% for row in congestion %}
+    <div class="card">
+      <div style="font-size:13px;font-weight:600;margin-bottom:4px">{{ row.service_name }}</div>
+      <div class="muted mb-2">{{ row.branch_name }}</div>
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div style="font-size:22px;font-weight:700;color:{% if row.waiting > 15 %}#dc2626{% elif row.waiting > 8 %}#f59e0b{% else %}#16a34a{% endif %}">{{ row.waiting }}</div>
+          <div class="muted">waiting</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:14px;font-weight:600">~{{ row.waiting * row.estimated_duration_minutes }} min</div>
+          <div class="muted">est. wait</div>
+        </div>
+      </div>
+      <div style="margin-top:10px">
+        <span class="tag {% if row.waiting > 15 %}tag-red{% elif row.waiting > 8 %}tag-amber{% else %}tag-green{% endif %}">
+          {% if row.waiting > 15 %}High{% elif row.waiting > 8 %}Moderate{% else %}Low{% endif %} congestion
+        </span>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <div class="card" style="text-align:center;padding:32px">
+    <div style="font-size:40px;margin-bottom:12px">📋</div>
+    <h3 style="font-size:16px;font-weight:600;margin-bottom:6px">Book a Queue Slot</h3>
+    <p class="muted" style="margin-bottom:16px">Register or log in to book your place in the queue and track your turn from anywhere.</p>
+    {% if session.user_id %}
+    <a href="/citizen/book" class="btn btn-primary">Book Now</a>
+    {% else %}
+    <a href="/register" class="btn btn-primary">Get Started</a>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

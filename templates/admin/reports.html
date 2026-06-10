@@ -1,0 +1,106 @@
+{% extends 'base.html' %}
+{% block title %}Reports – GovQueue{% endblock %}
+{% block content %}
+<div class="with-sidebar">
+  <div class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-lbl">System Admin</div>
+      <a href="/admin" class="sidebar-item">🏠 Overview</a>
+      <a href="/admin/services" class="sidebar-item">⚙️ Services</a>
+      <a href="/admin/users" class="sidebar-item">👥 Users</a>
+      <a href="/admin/reports" class="sidebar-item active">📊 Reports</a>
+      <a href="/logout" class="sidebar-item">🚪 Logout</a>
+    </div>
+  </div>
+  <div class="main-area">
+    <div class="page-header"><h2>Reports & Analytics</h2><p>Today — {{ today }}</p></div>
+
+    <div class="grid-4 mb-4">
+      <div class="stat-card">
+        <div class="stat-val">{{ stats.total or 0 }}</div>
+        <div class="stat-lbl">Total Bookings Today</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val" style="color:#16a34a">{{ stats.completed or 0 }}</div>
+        <div class="stat-lbl">Completed</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val" style="color:#dc2626">{{ stats.no_show or 0 }}</div>
+        <div class="stat-lbl">No-shows</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val" style="color:#f59e0b">{{ stats.cancelled or 0 }}</div>
+        <div class="stat-lbl">Cancellations</div>
+      </div>
+    </div>
+
+    {% if stats.total and stats.total > 0 %}
+    <div class="card mb-4">
+      <div class="card-title">Today's Summary</div>
+      <div style="display:flex;gap:16px;flex-wrap:wrap">
+        {% set total = stats.total or 1 %}
+        <div style="flex:1;min-width:200px">
+          <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+            <span class="muted">Completion rate</span>
+            <strong>{{ ((stats.completed or 0) / total * 100)|round(1) }}%</strong>
+          </div>
+          <div style="background:#e5e7eb;border-radius:4px;height:8px">
+            <div style="background:#16a34a;height:100%;border-radius:4px;width:{{ (stats.completed or 0) / total * 100 }}%"></div>
+          </div>
+        </div>
+        <div style="flex:1;min-width:200px">
+          <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+            <span class="muted">No-show rate</span>
+            <strong>{{ ((stats.no_show or 0) / total * 100)|round(1) }}%</strong>
+          </div>
+          <div style="background:#e5e7eb;border-radius:4px;height:8px">
+            <div style="background:#dc2626;height:100%;border-radius:4px;width:{{ (stats.no_show or 0) / total * 100 }}%"></div>
+          </div>
+        </div>
+        <div style="flex:1;min-width:200px">
+          <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+            <span class="muted">Cancellation rate</span>
+            <strong>{{ ((stats.cancelled or 0) / total * 100)|round(1) }}%</strong>
+          </div>
+          <div style="background:#e5e7eb;border-radius:4px;height:8px">
+            <div style="background:#f59e0b;height:100%;border-radius:4px;width:{{ (stats.cancelled or 0) / total * 100 }}%"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="card">
+      <div class="card-title">Service Performance</div>
+      {% if services_perf %}
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Service</th><th>Total Bookings</th><th>Completed</th><th>No-shows</th><th>Est. Duration</th><th>Rate</th></tr>
+          </thead>
+          <tbody>
+            {% for s in services_perf %}
+            {% set rate = (s.completed / s.total * 100) if s.total else 0 %}
+            <tr>
+              <td style="font-weight:500">{{ s.name }}</td>
+              <td>{{ s.total }}</td>
+              <td style="color:#16a34a">{{ s.completed }}</td>
+              <td style="color:#dc2626">{{ s.no_show }}</td>
+              <td>{{ s.estimated_duration_minutes }} min</td>
+              <td>
+                <span class="tag {% if rate >= 80 %}tag-green{% elif rate >= 60 %}tag-amber{% else %}tag-red{% endif %}">
+                  {{ rate|round(0)|int }}%
+                </span>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div style="text-align:center;padding:20px;color:#6b7280">No data for today yet.</div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

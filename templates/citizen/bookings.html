@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+{% block title %}My Bookings – GovQueue{% endblock %}
+{% block content %}
+<div class="with-sidebar">
+  <div class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-lbl">Citizen</div>
+      <a href="/citizen" class="sidebar-item">🏠 Dashboard</a>
+      <a href="/citizen/book" class="sidebar-item">📋 Book Queue</a>
+      <a href="/citizen/bookings" class="sidebar-item active">📄 My Bookings</a>
+      <a href="/citizen/track" class="sidebar-item">🔍 Track Queue</a>
+      <a href="/citizen/profile" class="sidebar-item">👤 Profile</a>
+    </div>
+  </div>
+  <div class="main-area">
+    <div class="flex-between mb-4">
+      <div class="page-header" style="margin:0"><h2>My Bookings</h2><p>All your queue reservations</p></div>
+      <a href="/citizen/book" class="btn btn-primary btn-sm">+ New Booking</a>
+    </div>
+
+    {% if bookings %}
+    <div class="card">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>#</th><th>Service</th><th>Branch</th><th>Date & Time</th><th>Status</th><th>Actions</th></tr>
+          </thead>
+          <tbody>
+            {% for bk in bookings %}
+            <tr>
+              <td style="font-weight:700;font-size:15px;color:#1a56db">{{ bk.queue_number }}</td>
+              <td>{{ bk.service_name }}</td>
+              <td>{{ bk.branch_name }}</td>
+              <td>{{ bk.slot_date }} <span class="muted">{{ bk.start_time }}</span></td>
+              <td>
+                <span class="tag {% if bk.status == 'completed' %}tag-green{% elif bk.status in ['cancelled','no_show'] %}tag-red{% elif bk.status == 'serving' %}tag-blue{% elif bk.status == 'arrived' %}tag-amber{% else %}tag-gray{% endif %}">
+                  {{ bk.status|title|replace('_',' ') }}
+                </span>
+              </td>
+              <td>
+                {% if bk.status == 'booked' %}
+                <form method="POST" action="/citizen/bookings/{{ bk.id }}/cancel" style="display:inline">
+                  <button class="btn btn-sm btn-danger" onclick="return confirm('Cancel this booking?')">Cancel</button>
+                </form>
+                {% elif bk.status in ['booked','arrived','serving'] %}
+                <a href="/citizen/track" class="btn btn-sm btn-outline">Track</a>
+                {% else %}
+                <span class="muted">—</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% else %}
+    <div class="card" style="text-align:center;padding:40px">
+      <div style="font-size:40px;margin-bottom:10px">📋</div>
+      <p class="muted">No bookings yet. <a href="/citizen/book">Book your first slot</a>.</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

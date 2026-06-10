@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+{% block title %}Windows – GovQueue{% endblock %}
+{% block content %}
+<div class="with-sidebar">
+  <div class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-lbl">Supervisor</div>
+      <a href="/supervisor" class="sidebar-item">🏠 Overview</a>
+      <a href="/supervisor/windows" class="sidebar-item active">🪟 Windows</a>
+      <a href="/logout" class="sidebar-item">🚪 Logout</a>
+    </div>
+  </div>
+  <div class="main-area">
+    <div class="page-header"><h2>Window Management</h2><p>Open, close, and assign staff to service windows.</p></div>
+    <div class="card">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Window</th><th>Service</th><th>Status</th><th>Assigned Staff</th><th>Actions</th></tr>
+          </thead>
+          <tbody>
+            {% for w in windows %}
+            <tr>
+              <td style="font-weight:600">{{ w.label or 'Window ' ~ w.window_number }}</td>
+              <td>{{ w.service_name or '—' }}</td>
+              <td><span class="tag {% if w.status == 'open' %}tag-green{% else %}tag-gray{% endif %}">{{ w.status|title }}</span></td>
+              <td>{{ w.staff_name or '—' }}</td>
+              <td style="display:flex;gap:6px;flex-wrap:wrap">
+                <form method="POST" action="/supervisor/window/{{ w.id }}/toggle">
+                  <button class="btn btn-sm {% if w.status == 'open' %}btn-danger{% else %}btn-success{% endif %}">
+                    {% if w.status == 'open' %}Close{% else %}Open{% endif %}
+                  </button>
+                </form>
+                <!-- Assign staff -->
+                <form method="POST" action="/supervisor/window/{{ w.id }}/assign" style="display:flex;gap:4px">
+                  <select class="input" name="staff_id" style="font-size:12px;padding:4px 8px;width:130px">
+                    <option value="">Assign staff…</option>
+                    {% for s in staff %}
+                    <option value="{{ s.id }}" {% if w.staff_id == s.id %}selected{% endif %}>{{ s.full_name }}</option>
+                    {% endfor %}
+                  </select>
+                  <button class="btn btn-sm btn-primary">Assign</button>
+                </form>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

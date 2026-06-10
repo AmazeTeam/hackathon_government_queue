@@ -1,0 +1,147 @@
+{% extends 'base.html' %}
+{% block title %}Users – GovQueue{% endblock %}
+{% block content %}
+<div class="with-sidebar">
+  <div class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-lbl">System Admin</div>
+      <a href="/admin" class="sidebar-item">🏠 Overview</a>
+      <a href="/admin/services" class="sidebar-item">⚙️ Services</a>
+      <a href="/admin/users" class="sidebar-item active">👥 Users</a>
+      <a href="/admin/reports" class="sidebar-item">📊 Reports</a>
+      <a href="/logout" class="sidebar-item">🚪 Logout</a>
+    </div>
+  </div>
+  <div class="main-area">
+    <div class="flex-between mb-4">
+      <div class="page-header" style="margin:0"><h2>User Management</h2><p>{{ users|length }} users found</p></div>
+      <button class="btn btn-primary btn-sm" onclick="document.getElementById('create-form').style.display='block'">+ Add User</button>
+    </div>
+
+    <!-- Create form -->
+    <div id="create-form" style="display:none" class="card mb-4">
+      <div class="card-title">New User</div>
+      <form method="POST">
+        <input type="hidden" name="action" value="create">
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">Full Name</label>
+            <input class="input" name="full_name" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Phone</label>
+            <input class="input" name="phone" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Password</label>
+            <input class="input" name="password" type="password" value="changeme">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Role</label>
+            <select class="input" name="role">
+              <option value="citizen">Citizen</option>
+              <option value="staff">Counter Staff</option>
+              <option value="validation_staff">Validation Staff</option>
+              <option value="supervisor">Supervisor</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Branch</label>
+            <select class="input" name="branch_id">
+              <option value="">— None —</option>
+              {% for b in branches %}<option value="{{ b.id }}">{{ b.name }}</option>{% endfor %}
+            </select>
+          </div>
+        </div>
+        <button class="btn btn-primary btn-sm">Create</button>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('create-form').style.display='none'">Cancel</button>
+      </form>
+    </div>
+
+    <!-- Filters -->
+    <form method="GET" style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap">
+      <input class="input" name="search" placeholder="Search name or phone…" value="{{ search }}" style="max-width:220px">
+      <select class="input" name="role" style="max-width:150px" onchange="this.form.submit()">
+        <option value="">All roles</option>
+        {% for r in ['citizen','staff','validation_staff','supervisor','admin'] %}
+        <option value="{{ r }}" {% if r == role_f %}selected{% endif %}>{{ r|title|replace('_',' ') }}</option>
+        {% endfor %}
+      </select>
+      <select class="input" name="status" style="max-width:130px" onchange="this.form.submit()">
+        <option value="">All statuses</option>
+        <option value="active" {% if status_f == 'active' %}selected{% endif %}>Active</option>
+        <option value="inactive" {% if status_f == 'inactive' %}selected{% endif %}>Inactive</option>
+      </select>
+      <button class="btn btn-secondary btn-sm">Search</button>
+    </form>
+
+    <div class="card">
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Name</th><th>Phone</th><th>Role</th><th>Branch</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody>
+            {% for u in users %}
+            <tr>
+              <td style="font-weight:500">{{ u.full_name }}</td>
+              <td class="muted">{{ u.phone }}</td>
+              <td><span class="tag {% if u.role == 'admin' %}tag-red{% elif u.role == 'supervisor' %}tag-amber{% elif u.role == 'citizen' %}tag-blue{% elif u.role == 'staff' %}tag-green{% else %}tag-purple{% endif %}">{{ u.role|replace('_',' ')|title }}</span></td>
+              <td class="muted">{{ u.branch_name or '—' }}</td>
+              <td><span class="tag {% if u.is_active %}tag-green{% else %}tag-gray{% endif %}">{% if u.is_active %}Active{% else %}Inactive{% endif %}</span></td>
+              <td style="display:flex;gap:6px">
+                <form method="POST">
+                  <input type="hidden" name="action" value="toggle">
+                  <input type="hidden" name="id" value="{{ u.id }}">
+                  <button class="btn btn-sm {% if u.is_active %}btn-warning{% else %}btn-success{% endif %}">
+                    {% if u.is_active %}Deactivate{% else %}Activate{% endif %}
+                  </button>
+                </form>
+                <button class="btn btn-sm btn-secondary" onclick="editRole({{ u.id }}, '{{ u.role }}', {{ u.branch_id or 'null' }})">Role</button>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Edit role modal -->
+    <div id="role-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:100;align-items:center;justify-content:center">
+      <div class="card" style="width:360px">
+        <div class="card-title">Edit Role</div>
+        <form method="POST">
+          <input type="hidden" name="action" value="edit_role">
+          <input type="hidden" name="id" id="role-uid">
+          <div class="form-group">
+            <label class="form-label">Role</label>
+            <select class="input" name="role" id="role-select">
+              {% for r in ['citizen','staff','validation_staff','supervisor','admin'] %}
+              <option value="{{ r }}">{{ r|replace('_',' ')|title }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Branch</label>
+            <select class="input" name="branch_id" id="role-branch">
+              <option value="">— None —</option>
+              {% for b in branches %}<option value="{{ b.id }}">{{ b.name }}</option>{% endfor %}
+            </select>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-primary btn-sm">Save</button>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('role-modal').style.display='none'">Cancel</button>
+          </div>
+        </form>
+      </div>
+    </div>
+    <script>
+    function editRole(id, role, branchId) {
+      document.getElementById('role-uid').value = id;
+      document.getElementById('role-select').value = role;
+      const bs = document.getElementById('role-branch');
+      if(branchId) bs.value = branchId; else bs.value = '';
+      document.getElementById('role-modal').style.display = 'flex';
+    }
+    </script>
+  </div>
+</div>
+{% endblock %}

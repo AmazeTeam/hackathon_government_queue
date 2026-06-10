@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+{% block title %}Admin Dashboard – GovQueue{% endblock %}
+{% block content %}
+<div class="with-sidebar">
+  <div class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-lbl">System Admin</div>
+      <a href="/admin" class="sidebar-item active">🏠 Overview</a>
+      <a href="/admin/services" class="sidebar-item">⚙️ Services</a>
+      <a href="/admin/users" class="sidebar-item">👥 Users</a>
+      <a href="/admin/reports" class="sidebar-item">📊 Reports</a>
+      <a href="/logout" class="sidebar-item">🚪 Logout</a>
+    </div>
+  </div>
+  <div class="main-area">
+    <div class="page-header"><h2>System Admin Dashboard</h2><p>Platform overview and management.</p></div>
+    <div class="grid-4 mb-4">
+      <div class="stat-card">
+        <div class="stat-val">{{ stats.users }}</div>
+        <div class="stat-lbl">Registered Citizens</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val" style="color:#1a56db">{{ stats.bookings_today }}</div>
+        <div class="stat-lbl">Bookings Today</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val" style="color:#16a34a">{{ stats.services }}</div>
+        <div class="stat-lbl">Active Services</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val">{{ stats.branches }}</div>
+        <div class="stat-lbl">Active Branches</div>
+      </div>
+    </div>
+    <div class="grid-2">
+      <a href="/admin/services" class="card" style="text-decoration:none">
+        <div style="font-size:28px;margin-bottom:8px">⚙️</div>
+        <div style="font-weight:600">Service Management</div>
+        <div class="muted">Create, edit, deactivate services</div>
+      </a>
+      <a href="/admin/users" class="card" style="text-decoration:none">
+        <div style="font-size:28px;margin-bottom:8px">👥</div>
+        <div style="font-weight:600">User Management</div>
+        <div class="muted">Manage users and roles</div>
+      </a>
+      <a href="/admin/reports" class="card" style="text-decoration:none">
+        <div style="font-size:28px;margin-bottom:8px">📊</div>
+        <div style="font-weight:600">Reports & Analytics</div>
+        <div class="muted">Performance metrics</div>
+      </a>
+    </div>
+  </div>
+</div>
+{% endblock %}
