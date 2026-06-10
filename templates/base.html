@@ -134,8 +134,8 @@ setInterval(()=>{
         b.className='notif-badge'; b.textContent=data.length;
         if(!el.querySelector('.notif-badge')) el.appendChild(b);
       }
-      if(data.some(n=>n.type==='turn_approaching')){
-        const n=data.find(n=>n.type==='turn_approaching');
+      if(data.some(n=>n.type==='approaching' || n.type==='ticket_called')){
+        const n=data.find(n=>n.type==='approaching' || n.type==='ticket_called');
         if(Notification.permission==='granted'){
           new Notification('GovQueue',{body:n.message});
         }

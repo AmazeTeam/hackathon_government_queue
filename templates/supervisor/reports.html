@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+{% block title %}Reports – GovQueue{% endblock %}
+{% block content %}
+<div class="with-sidebar">
+  <div class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-lbl">Supervisor</div>
+      <a href="/supervisor" class="sidebar-item">🏠 Overview</a>
+      <a href="/supervisor/windows" class="sidebar-item">🪟 Windows & Staff</a>
+      <a href="/supervisor/reports" class="sidebar-item active">📊 Reports</a>
+      <a href="/logout" class="sidebar-item">🚪 Logout</a>
+    </div>
+  </div>
+  <div class="main-area">
+    <div class="page-header"><h2>Branch Reports</h2><p>Today — {{ today }}</p></div>
+    <div class="grid-3">
+      <div class="stat-card">
+        <div class="stat-val">{{ avg_wait }}</div>
+        <div class="stat-lbl">Avg wait (minutes)</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val" style="color:#16a34a">{{ stats.completed_tickets or 0 }}</div>
+        <div class="stat-lbl">Completed tickets</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val" style="color:#dc2626">{{ stats.no_shows or 0 }}</div>
+        <div class="stat-lbl">No-shows</div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

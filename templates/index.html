@@ -3,7 +3,7 @@
 {% block content %}
 <div style="background:#1a56db;color:#fff;padding:48px 20px;text-align:center">
   <h1 style="font-size:32px;font-weight:700;margin-bottom:8px">🏛 GovQueue</h1>
-  <p style="font-size:16px;opacity:.85;margin-bottom:24px">Skip the line — book your government service slot online</p>
+  <p style="font-size:16px;opacity:.85;margin-bottom:24px">Join government service queues remotely — skip the physical wait</p>
   {% if not session.user_id %}
   <div style="display:flex;gap:12px;justify-content:center">
     <a href="/register" class="btn btn-secondary">Register Now</a>
@@ -17,7 +17,7 @@
 <div class="container">
   <div style="margin-bottom:24px">
     <h2 style="font-size:18px;font-weight:600;margin-bottom:4px">Live Branch Status</h2>
-    <p class="muted">Current congestion and estimated wait times</p>
+    <p class="muted">Current congestion and estimated wait times (guest view)</p>
   </div>
 
   {% if congestion %}
@@ -48,10 +48,10 @@
 
   <div class="card" style="text-align:center;padding:32px">
     <div style="font-size:40px;margin-bottom:12px">📋</div>
-    <h3 style="font-size:16px;font-weight:600;margin-bottom:6px">Book a Queue Slot</h3>
-    <p class="muted" style="margin-bottom:16px">Register or log in to book your place in the queue and track your turn from anywhere.</p>
+    <h3 style="font-size:16px;font-weight:600;margin-bottom:6px">Join a Queue</h3>
+    <p class="muted" style="margin-bottom:16px">Register or log in to join a service queue and track your turn from anywhere.</p>
     {% if session.user_id %}
-    <a href="/citizen/book" class="btn btn-primary">Book Now</a>
+    <a href="/citizen/book" class="btn btn-primary">Join Queue</a>
     {% else %}
     <a href="/register" class="btn btn-primary">Get Started</a>
     {% endif %}

@@ -5,28 +5,39 @@
   <div style="width:100%;max-width:360px">
     <div class="card">
       <h2 style="font-size:20px;font-weight:600;margin-bottom:4px">Sign in</h2>
-      <p class="muted" style="margin-bottom:20px">Enter your phone and password</p>
+      <p class="muted" style="margin-bottom:20px">Phone number + OTP authentication</p>
+
+      {% if step == 'verify' %}
       <form method="POST">
+        <input type="hidden" name="action" value="verify">
+        <div class="form-group">
+          <label class="form-label">Phone Number</label>
+          <input class="input" name="phone" type="tel" value="{{ phone }}" readonly>
+        </div>
+        <div class="form-group">
+          <label class="form-label">OTP Code</label>
+          <input class="input" name="otp" type="text" placeholder="123456" required autofocus>
+        </div>
+        <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:4px">Verify & Login</button>
+      </form>
+      {% else %}
+      <form method="POST">
+        <input type="hidden" name="action" value="request">
         <div class="form-group">
           <label class="form-label">Phone Number</label>
           <input class="input" name="phone" type="tel" placeholder="+20100000000" required>
         </div>
-        <div class="form-group">
-          <label class="form-label">Password</label>
-          <input class="input" name="password" type="password" required>
-        </div>
-        <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:4px">Login</button>
+        <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:4px">Send OTP</button>
       </form>
+      {% endif %}
+
       <p style="text-align:center;margin-top:16px;font-size:13px;color:#6b7280">
         Don't have an account? <a href="/register">Register</a>
       </p>
     </div>
     <div class="card" style="margin-top:12px;font-size:12px;color:#6b7280">
-      <strong>Demo credentials:</strong><br>
-      Admin: +20100000000 / admin123<br>
-      Supervisor: +20100000001 / super123<br>
-      Staff: +20100000003 / staff123<br>
-      Citizen: +20100000006 / citizen123
+      <strong>Demo OTP:</strong> 123456<br>
+      <strong>Demo phones:</strong> +20100000000 (Admin), +20100000006 (Citizen)
     </div>
   </div>
 </div>

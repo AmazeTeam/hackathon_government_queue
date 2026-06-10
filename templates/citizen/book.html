@@ -1,77 +1,55 @@
 {% extends 'base.html' %}
-{% block title %}Book Queue – GovQueue{% endblock %}
+{% block title %}Join Queue – GovQueue{% endblock %}
 {% block content %}
 <div class="with-sidebar">
   <div class="sidebar">
     <div class="sidebar-section">
       <div class="sidebar-lbl">Citizen</div>
       <a href="/citizen" class="sidebar-item">🏠 Dashboard</a>
-      <a href="/citizen/book" class="sidebar-item active">📋 Book Queue</a>
-      <a href="/citizen/bookings" class="sidebar-item">📄 My Bookings</a>
+      <a href="/citizen/book" class="sidebar-item active">📋 Join Queue</a>
+      <a href="/citizen/bookings" class="sidebar-item">📄 My Tickets</a>
       <a href="/citizen/track" class="sidebar-item">🔍 Track Queue</a>
       <a href="/citizen/profile" class="sidebar-item">👤 Profile</a>
     </div>
   </div>
   <div class="main-area">
     <div class="page-header">
-      <h2>Book a Queue Slot</h2>
-      <p>Select branch, service, and time slot.</p>
+      <h2>Join a Queue</h2>
+      <p>Select branch and service to get your queue ticket.</p>
     </div>
 
-    <!-- Step 1: Branch -->
-    <div class="card mb-4">
-      <div class="card-title">Step 1 — Select Branch</div>
-      <form method="GET">
-        <select class="input" name="branch_id" onchange="this.form.submit()" style="max-width:300px">
+    <form method="POST">
+      <div class="card mb-4">
+        <div class="card-title">Step 1 — Select Branch</div>
+        <select class="input" name="branch_id" onchange="window.location='?branch_id='+this.value" style="max-width:300px">
           {% for b in branches %}
-          <option value="{{ b.id }}" {% if b.id|string == branch_id|string %}selected{% endif %}>{{ b.name }}</option>
+          <option value="{{ b.id }}" {% if b.id == branch_id %}selected{% endif %}>{{ b.name }}</option>
           {% endfor %}
         </select>
-      </form>
-    </div>
-
-    {% if services %}
-    <!-- Step 2: Service -->
-    <div class="card mb-4">
-      <div class="card-title">Step 2 — Select Service</div>
-      <div class="grid-3">
-        {% for s in services %}
-        <a href="?branch_id={{ branch_id }}&bs_id={{ s.bs_id }}" style="text-decoration:none">
-          <div class="card {% if s.bs_id|string == sel_bs|string %}{% endif %}" style="cursor:pointer;border:2px solid {% if s.bs_id|string == sel_bs|string %}#1a56db{% else %}#e5e7eb{% endif %}">
-            <div style="font-weight:600;font-size:13px">{{ s.name }}</div>
-            {% if s.name_ar %}<div class="muted" style="direction:rtl">{{ s.name_ar }}</div>{% endif %}
-            <div class="muted mt-4">~{{ s.estimated_duration_minutes }} min per transaction</div>
-          </div>
-        </a>
-        {% endfor %}
       </div>
-    </div>
-    {% endif %}
 
-    {% if slots %}
-    <!-- Step 3: Time Slot + Book -->
-    <div class="card">
-      <div class="card-title">Step 3 — Select Time Slot & Book</div>
-      <form method="POST">
-        <input type="hidden" name="branch_service_id" value="{{ sel_bs }}">
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-bottom:16px">
-          {% for slot in slots %}
-          <label style="cursor:pointer">
-            <input type="radio" name="time_slot_id" value="{{ slot.id }}" required style="display:none" onclick="this.closest('label').style.border='2px solid #1a56db'">
-            <div style="border:2px solid #e5e7eb;border-radius:8px;padding:12px;transition:border .15s" onclick="this.parentElement.querySelector('input').click();document.querySelectorAll('.slot-card').forEach(e=>e.style.borderColor='#e5e7eb');this.style.borderColor='#1a56db'" class="slot-card">
-              <div style="font-weight:600;font-size:13px">{{ slot.start_time }}</div>
-              <div class="muted">{{ slot.slot_date }}</div>
-              <div style="margin-top:6px"><span class="tag tag-green">{{ slot.available }} spots left</span></div>
+      {% if services %}
+      <div class="card">
+        <div class="card-title">Step 2 — Select Service & Join</div>
+        <div class="grid-3" style="margin-bottom:16px">
+          {% for s in services %}
+          <label style="cursor:pointer;text-decoration:none">
+            <input type="radio" name="service_id" value="{{ s.service_id }}" required style="display:none">
+            <div class="card" style="border:2px solid #e5e7eb;cursor:pointer" onclick="this.closest('label').querySelector('input').checked=true">
+              <div style="font-weight:600;font-size:13px">{{ s.name }}</div>
+              {% if s.description %}<div class="muted">{{ s.description }}</div>{% endif %}
+              <div class="muted mt-4">~{{ s.estimated_duration_minutes }} min per citizen</div>
             </div>
           </label>
           {% endfor %}
         </div>
-        <button class="btn btn-primary">Confirm Booking</button>
-      </form>
-    </div>
-    {% elif sel_bs %}
-    <div class="alert alert-warning">No available slots for this service. Try another date or service.</div>
-    {% endif %}
+        <input type="hidden" name="branch_id" value="{{ branch_id }}">
+        <button class="btn btn-primary">Join Queue</button>
+      </div>
+      {% elif branch_id %}
+      <div class="alert alert-warning">No services available at this branch.</div>
+      {% endif %}
+    </form>
   </div>
 </div>
 {% endblock %}

@@ -6,61 +6,91 @@
     <div class="sidebar-section">
       <div class="sidebar-lbl">System Admin</div>
       <a href="/admin" class="sidebar-item">🏠 Overview</a>
-      <a href="/admin/services" class="sidebar-item active">⚙️ Services</a>
+      <a href="/admin/services" class="sidebar-item active">⚙️ Services & Branches</a>
       <a href="/admin/users" class="sidebar-item">👥 Users</a>
       <a href="/admin/reports" class="sidebar-item">📊 Reports</a>
       <a href="/logout" class="sidebar-item">🚪 Logout</a>
     </div>
   </div>
   <div class="main-area">
-    <div class="flex-between mb-4">
-      <div class="page-header" style="margin:0"><h2>Service Management</h2><p>{{ services|length }} services total</p></div>
-      <button class="btn btn-primary btn-sm" onclick="document.getElementById('create-form').style.display='block'">+ Create Service</button>
-    </div>
+    <div class="page-header"><h2>Services & Branches</h2><p>Manage organization services and branch assignments</p></div>
 
-    <!-- Create form (hidden by default) -->
-    <div id="create-form" style="display:none" class="card mb-4">
-      <div class="card-title">New Service</div>
-      <form method="POST">
-        <input type="hidden" name="action" value="create">
-        <div class="grid-2">
+    <div class="grid-2 mb-4">
+      <div class="card">
+        <div class="card-title">Create Service</div>
+        <form method="POST">
+          <input type="hidden" name="action" value="create_service">
           <div class="form-group">
-            <label class="form-label">Name (English)</label>
+            <label class="form-label">Name</label>
             <input class="input" name="name" required>
           </div>
           <div class="form-group">
-            <label class="form-label">Name (Arabic)</label>
-            <input class="input" name="name_ar" dir="rtl">
+            <label class="form-label">Description</label>
+            <input class="input" name="description">
+          </div>
+          <button class="btn btn-primary btn-sm">Create Service</button>
+        </form>
+      </div>
+      <div class="card">
+        <div class="card-title">Create Branch</div>
+        <form method="POST">
+          <input type="hidden" name="action" value="create_branch">
+          <div class="form-group">
+            <label class="form-label">Name</label>
+            <input class="input" name="name" required>
           </div>
           <div class="form-group">
-            <label class="form-label">Est. Duration (minutes)</label>
-            <input class="input" name="duration" type="number" value="10" min="1">
+            <label class="form-label">Address</label>
+            <input class="input" name="address">
           </div>
+          <button class="btn btn-primary btn-sm">Create Branch</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="card mb-4">
+      <div class="card-title">Assign Service to Branch</div>
+      <form method="POST" style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
+        <input type="hidden" name="action" value="assign_service">
+        <div class="form-group" style="margin:0">
+          <label class="form-label">Branch</label>
+          <select class="input" name="branch_id" required>
+            {% for b in branches %}<option value="{{ b.id }}">{{ b.name }}</option>{% endfor %}
+          </select>
         </div>
-        <button class="btn btn-primary btn-sm">Create</button>
-        <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('create-form').style.display='none'">Cancel</button>
+        <div class="form-group" style="margin:0">
+          <label class="form-label">Service</label>
+          <select class="input" name="service_id" required>
+            {% for s in services %}<option value="{{ s.id }}">{{ s.name }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="form-group" style="margin:0">
+          <label class="form-label">Duration (min)</label>
+          <input class="input" name="duration" type="number" value="10" min="1" style="width:80px">
+        </div>
+        <button class="btn btn-secondary btn-sm">Assign</button>
       </form>
     </div>
 
-    <div class="card">
+    <div class="card mb-4">
+      <div class="card-title">Services</div>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Service</th><th>Arabic</th><th>Duration</th><th>Branches</th><th>Status</th><th>Actions</th></tr></thead>
+          <thead><tr><th>Service</th><th>Description</th><th>Status</th><th>Actions</th></tr></thead>
           <tbody>
             {% for s in services %}
             <tr>
               <td style="font-weight:500">{{ s.name }}</td>
-              <td dir="rtl">{{ s.name_ar or '—' }}</td>
-              <td>{{ s.estimated_duration_minutes }} min</td>
-              <td>{{ s.branch_count }} branch(es)</td>
+              <td class="muted">{{ s.description or '—' }}</td>
               <td><span class="tag {% if s.is_active %}tag-green{% else %}tag-gray{% endif %}">{% if s.is_active %}Active{% else %}Inactive{% endif %}</span></td>
-              <td style="display:flex;gap:6px">
-                <button class="btn btn-sm btn-secondary" onclick="editService({{ s.id }}, '{{ s.name }}', '{{ s.name_ar or '' }}', {{ s.estimated_duration_minutes }})">Edit</button>
+              <td>
+                {% if s.is_active %}
                 <form method="POST">
-                  <input type="hidden" name="action" value="delete">
+                  <input type="hidden" name="action" value="deactivate_service">
                   <input type="hidden" name="id" value="{{ s.id }}">
-                  <button class="btn btn-sm btn-danger" onclick="return confirm('Deactivate this service?')">{% if s.is_active %}Deactivate{% else %}Deleted{% endif %}</button>
+                  <button class="btn btn-sm btn-danger">Deactivate</button>
                 </form>
+                {% endif %}
               </td>
             </tr>
             {% endfor %}
@@ -69,41 +99,24 @@
       </div>
     </div>
 
-    <!-- Edit Modal -->
-    <div id="edit-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:100;align-items:center;justify-content:center">
-      <div class="card" style="width:400px">
-        <div class="card-title">Edit Service</div>
-        <form method="POST">
-          <input type="hidden" name="action" value="edit">
-          <input type="hidden" name="id" id="edit-id">
-          <div class="form-group">
-            <label class="form-label">Name (English)</label>
-            <input class="input" name="name" id="edit-name" required>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Name (Arabic)</label>
-            <input class="input" name="name_ar" id="edit-name-ar" dir="rtl">
-          </div>
-          <div class="form-group">
-            <label class="form-label">Duration (minutes)</label>
-            <input class="input" name="duration" id="edit-duration" type="number" min="1">
-          </div>
-          <div style="display:flex;gap:8px">
-            <button class="btn btn-primary btn-sm">Save</button>
-            <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('edit-modal').style.display='none'">Cancel</button>
-          </div>
-        </form>
+    <div class="card">
+      <div class="card-title">Branch Services</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Branch</th><th>Service</th><th>Duration</th><th>Status</th></tr></thead>
+          <tbody>
+            {% for bs in branch_services %}
+            <tr>
+              <td>{{ bs.branch_name }}</td>
+              <td>{{ bs.service_name }}</td>
+              <td>{{ bs.estimated_duration_minutes }} min</td>
+              <td><span class="tag {% if bs.is_active %}tag-green{% else %}tag-gray{% endif %}">{% if bs.is_active %}Active{% else %}Inactive{% endif %}</span></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
       </div>
     </div>
-    <script>
-    function editService(id, name, nameAr, dur) {
-      document.getElementById('edit-id').value = id;
-      document.getElementById('edit-name').value = name;
-      document.getElementById('edit-name-ar').value = nameAr;
-      document.getElementById('edit-duration').value = dur;
-      document.getElementById('edit-modal').style.display = 'flex';
-    }
-    </script>
   </div>
 </div>
 {% endblock %}
