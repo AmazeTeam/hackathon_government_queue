@@ -54,13 +54,21 @@
               <td>{{ s.estimated_duration_minutes }} min</td>
               <td>{{ s.branch_count }} branch(es)</td>
               <td><span class="tag {% if s.is_active %}tag-green{% else %}tag-gray{% endif %}">{% if s.is_active %}Active{% else %}Inactive{% endif %}</span></td>
-              <td style="display:flex;gap:6px">
-                <button class="btn btn-sm btn-secondary" onclick="editService({{ s.id }}, '{{ s.name }}', '{{ s.name_ar or '' }}', {{ s.estimated_duration_minutes }})">Edit</button>
-                <form method="POST">
-                  <input type="hidden" name="action" value="delete">
-                  <input type="hidden" name="id" value="{{ s.id }}">
-                  <button class="btn btn-sm btn-danger" onclick="return confirm('Deactivate this service?')">{% if s.is_active %}Deactivate{% else %}Deleted{% endif %}</button>
-                </form>
+              <td>
+                <div style="display:flex;gap:6px">
+                  <button type="button" class="btn btn-sm btn-secondary"
+                    data-id="{{ s.id }}"
+                    data-name="{{ s.name }}"
+                    data-name-ar="{{ s.name_ar or '' }}"
+                    data-duration="{{ s.estimated_duration_minutes }}"
+                    onclick="editService(this)">Edit</button>
+                  <form method="POST" style="display:inline">
+                    <input type="hidden" name="action" value="delete">
+                    <input type="hidden" name="id" value="{{ s.id }}">
+                    <button type="submit" class="btn btn-sm btn-danger"
+                      onclick="return confirm('Delete this service? It will be removed from booking.')">Delete</button>
+                  </form>
+                </div>
               </td>
             </tr>
             {% endfor %}
@@ -96,11 +104,11 @@
       </div>
     </div>
     <script>
-    function editService(id, name, nameAr, dur) {
-      document.getElementById('edit-id').value = id;
-      document.getElementById('edit-name').value = name;
-      document.getElementById('edit-name-ar').value = nameAr;
-      document.getElementById('edit-duration').value = dur;
+    function editService(btn) {
+      document.getElementById('edit-id').value = btn.dataset.id;
+      document.getElementById('edit-name').value = btn.dataset.name;
+      document.getElementById('edit-name-ar').value = btn.dataset.nameAr;
+      document.getElementById('edit-duration').value = btn.dataset.duration;
       document.getElementById('edit-modal').style.display = 'flex';
     }
     </script>

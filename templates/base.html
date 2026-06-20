@@ -14,7 +14,7 @@ a:hover{text-decoration:underline}
 .navbar-brand{color:#fff;font-size:16px;font-weight:600;display:flex;align-items:center;gap:8px}
 .navbar-brand span{color:#60a5fa}
 .navbar-right{display:flex;align-items:center;gap:16px}
-.navbar-right a{color:rgba(255,255,255,.7);font-size:13px}
+.navbar-right a{color:rgba(96 165 250,.7);font-size:13px}
 .navbar-right a:hover{color:#fff;text-decoration:none}
 .btn{display:inline-flex;align-items:center;gap:6px;padding:7px 16px;border-radius:6px;font-size:13px;font-weight:500;cursor:pointer;border:1px solid transparent;transition:opacity .15s}
 .btn:hover{opacity:.85;text-decoration:none}
@@ -79,8 +79,20 @@ tr:hover td{background:#fafafa}
 .ticket-banner{background:#1a56db;border-radius:10px;padding:20px 24px;display:flex;align-items:center;justify-content:space-between;color:#fff;margin-bottom:20px}
 .ticket-num{font-size:36px;font-weight:700;letter-spacing:2px}
 .ticket-meta{font-size:12px;opacity:.8;margin-top:4px}
-/* Notification dot */
-.notif-badge{background:#ef4444;color:#fff;font-size:10px;border-radius:9px;padding:1px 5px;min-width:16px;text-align:center;display:inline-block}
+/* Notifications */
+.notif-wrap{position:relative}
+.notif-btn{background:none;border:none;color:rgba(255,255,255,.7);font-size:16px;cursor:pointer;padding:4px 6px;border-radius:6px;line-height:1}
+.notif-btn:hover{color:#fff;background:rgba(255,255,255,.08)}
+.notif-badge{background:#ef4444;color:#fff;font-size:10px;border-radius:9px;padding:1px 5px;min-width:16px;text-align:center;display:inline-block;vertical-align:top;margin-left:2px}
+.notif-panel{display:none;position:absolute;right:0;top:calc(100% + 8px);width:320px;background:#fff;border:1px solid #e5e7eb;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:200;color:#111827}
+.notif-panel.open{display:block}
+.notif-panel-hd{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-bottom:1px solid #f3f4f6;font-size:13px;font-weight:600}
+.notif-panel-bd{max-height:280px;overflow-y:auto}
+.notif-item{padding:10px 14px;border-bottom:1px solid #f3f4f6;font-size:12px;color:#374151;line-height:1.4}
+.notif-item:last-child{border-bottom:none}
+.notif-item-time{font-size:10px;color:#9ca3af;margin-top:4px}
+.notif-empty{padding:20px 14px;font-size:12px;color:#6b7280;text-align:center}
+.notif-panel-ft{padding:10px 14px;border-top:1px solid #f3f4f6;text-align:right}
 /* Misc */
 .muted{color:#6b7280;font-size:12px}
 .mb-4{margin-bottom:16px}
@@ -97,10 +109,20 @@ tr:hover td{background:#fafafa}
   <a href="/" class="navbar-brand">🏛 Gov<span>Queue</span></a>
   <div class="navbar-right">
     {% if session.user_id %}
-      <a href="/notifications/read" id="notif-link" style="position:relative">
-        🔔
-        {% if unread > 0 %}<span class="notif-badge">{{ unread }}</span>{% endif %}
-      </a>
+      <div class="notif-wrap" id="notif-wrap">
+        <button type="button" class="notif-btn" id="notif-btn" aria-label="Notifications">
+          🔔{% if unread > 0 %}<span class="notif-badge" id="notif-badge">{{ unread }}</span>{% endif %}
+        </button>
+        <div class="notif-panel" id="notif-panel">
+          <div class="notif-panel-hd">
+            <span>Notifications</span>
+            <button type="button" class="btn btn-sm btn-secondary" id="notif-mark-read" style="display:none">Mark all read</button>
+          </div>
+          <div class="notif-panel-bd" id="notif-list">
+            <div class="notif-empty">Loading…</div>
+          </div>
+        </div>
+      </div>
       <a href="/dashboard">{{ session.name }}</a>
       <a href="/logout" class="btn btn-sm btn-secondary">Logout</a>
     {% else %}
@@ -123,27 +145,93 @@ tr:hover td{background:#fafafa}
 {% block content %}{% endblock %}
 
 <script>
-// Poll notifications every 30s
 {% if session.user_id %}
-setInterval(()=>{
-  fetch('/api/notifications').then(r=>r.json()).then(data=>{
-    if(data.length>0){
-      const el=document.getElementById('notif-link');
-      if(el){
-        const b=el.querySelector('.notif-badge')||document.createElement('span');
-        b.className='notif-badge'; b.textContent=data.length;
-        if(!el.querySelector('.notif-badge')) el.appendChild(b);
+(function(){
+  const btn=document.getElementById('notif-btn');
+  const panel=document.getElementById('notif-panel');
+  const list=document.getElementById('notif-list');
+  const markBtn=document.getElementById('notif-mark-read');
+  const wrap=document.getElementById('notif-wrap');
+  let lastTurnId=null;
+
+  function updateBadge(count){
+    let badge=document.getElementById('notif-badge');
+    if(count>0){
+      if(!badge){
+        badge=document.createElement('span');
+        badge.className='notif-badge';
+        badge.id='notif-badge';
+        btn.appendChild(badge);
       }
-      if(data.some(n=>n.type==='turn_approaching')){
-        const n=data.find(n=>n.type==='turn_approaching');
-        if(Notification.permission==='granted'){
-          new Notification('GovQueue',{body:n.message});
-        }
-      }
+      badge.textContent=count;
+    } else if(badge){
+      badge.remove();
     }
-  }).catch(()=>{});
-}, 30000);
-if(Notification.permission==='default') Notification.requestPermission();
+    markBtn.style.display=count>0?'inline-flex':'none';
+  }
+
+  function renderList(data){
+    if(!data.length){
+      list.innerHTML='<div class="notif-empty">No new notifications</div>';
+      return;
+    }
+    list.innerHTML=data.map(n=>{
+      const time=n.sent_at?n.sent_at.replace('T',' ').slice(0,16):'';
+      return `<div class="notif-item">${n.message}<div class="notif-item-time">${time}</div></div>`;
+    }).join('');
+  }
+
+  function loadNotifications(){
+    fetch('/api/notifications',{headers:{'Accept':'application/json'}})
+      .then(r=>{if(!r.ok) throw new Error(); return r.json();})
+      .then(data=>{
+        updateBadge(data.length);
+        if(panel.classList.contains('open')) renderList(data);
+        const turn=data.find(n=>n.type==='turn_approaching');
+        if(turn && turn.id!==lastTurnId){
+          lastTurnId=turn.id;
+          if(window.Notification && Notification.permission==='granted'){
+            new Notification('GovQueue',{body:turn.message});
+          }
+        }
+      })
+      .catch(()=>{
+        if(panel.classList.contains('open')){
+          list.innerHTML='<div class="notif-empty">Could not load notifications</div>';
+        }
+      });
+  }
+
+  btn.addEventListener('click',e=>{
+    e.stopPropagation();
+    panel.classList.toggle('open');
+    if(panel.classList.contains('open')){
+      list.innerHTML='<div class="notif-empty">Loading…</div>';
+      fetch('/api/notifications',{headers:{'Accept':'application/json'}})
+        .then(r=>r.json())
+        .then(data=>{updateBadge(data.length); renderList(data);})
+        .catch(()=>{list.innerHTML='<div class="notif-empty">Could not load notifications</div>';});
+    }
+  });
+
+  markBtn.addEventListener('click',()=>{
+    fetch('/notifications/read',{method:'POST',headers:{'Accept':'application/json'}})
+      .then(r=>r.json())
+      .then(()=>{
+        updateBadge(0);
+        renderList([]);
+        panel.classList.remove('open');
+      });
+  });
+
+  document.addEventListener('click',e=>{
+    if(!wrap.contains(e.target)) panel.classList.remove('open');
+  });
+
+  loadNotifications();
+  setInterval(loadNotifications,30000);
+  if(window.Notification && Notification.permission==='default') Notification.requestPermission();
+})();
 {% endif %}
 </script>
 </body>
