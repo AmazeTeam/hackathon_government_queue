@@ -10,29 +10,43 @@
     </div>
   </div>
   <div class="main-area">
-    <div class="page-header"><h2>Service Window</h2><p>Today's service queue</p></div>
+    <div class="page-header"><h2>Service Window</h2><p>Round-robin queue serving</p></div>
 
     {% if win %}
     <div class="alert alert-info">
-      Assigned to: <strong>{{ win.label or 'Window ' ~ win.window_number }}</strong> — {{ win.service_name }}
-      <span class="tag {% if win.status == 'open' %}tag-green{% else %}tag-red{% endif %}" style="margin-left:8px">{{ win.status|title }}</span>
+      Assigned to: <strong>Window {{ win.window_number }}</strong>
+      <span class="tag {% if win.is_open %}tag-green{% else %}tag-red{% endif %}" style="margin-left:8px">{% if win.is_open %}Open{% else %}Closed{% endif %}</span>
     </div>
 
+    {% if qualifications %}
+    <div class="card mb-4" style="padding:12px 16px">
+      <span class="muted">Qualified services:</span>
+      {% for q in qualifications %}
+      <span class="tag tag-blue" style="margin-left:6px">{{ q.service_name }}</span>
+      {% endfor %}
+    </div>
+    {% endif %}
+
     <div class="grid-2 mb-4">
-      <!-- Currently Serving -->
       <div class="card" style="text-align:center;padding:28px">
         <div class="muted" style="margin-bottom:6px;text-transform:uppercase;font-size:11px;letter-spacing:.06em">Currently Serving</div>
         {% if serving %}
-        <div style="font-size:52px;font-weight:700;color:#1a56db;line-height:1">{{ serving.queue_number }}</div>
+        <div style="font-size:52px;font-weight:700;color:#1a56db;line-height:1">#{{ serving.queue_number }}</div>
         <div style="margin-top:8px;font-weight:500">{{ serving.full_name }}</div>
+        <div style="margin-top:8px"><span class="tag tag-blue">{{ serving.status }}</span></div>
         <div style="margin-top:12px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
-          <form method="POST" action="/staff/mark/{{ serving.id }}/completed">
+          {% if serving.status == 'Called' %}
+          <form method="POST" action="/staff/tickets/{{ serving.id }}/start">
+            <button class="btn btn-primary btn-sm">▶ Start</button>
+          </form>
+          {% endif %}
+          <form method="POST" action="/staff/tickets/{{ serving.id }}/complete">
             <button class="btn btn-success btn-sm">✔ Completed</button>
           </form>
-          <form method="POST" action="/staff/mark/{{ serving.id }}/skipped">
+          <form method="POST" action="/staff/tickets/{{ serving.id }}/skip">
             <button class="btn btn-warning btn-sm">⏭ Skipped</button>
           </form>
-          <form method="POST" action="/staff/mark/{{ serving.id }}/no_show">
+          <form method="POST" action="/staff/tickets/{{ serving.id }}/no_show">
             <button class="btn btn-secondary btn-sm">✗ No-show</button>
           </form>
         </div>
@@ -48,20 +62,19 @@
         </div>
       </div>
 
-      <!-- Queue -->
       <div class="card">
         <div class="card-title">Waiting Queue ({{ queue|length }})</div>
         {% if queue %}
         <div class="table-wrap">
           <table>
-            <thead><tr><th>#</th><th>Ticket</th><th>Name</th><th>Status</th></tr></thead>
+            <thead><tr><th>#</th><th>Ticket</th><th>Name</th><th>Service</th></tr></thead>
             <tbody>
-              {% for bk in queue[:8] %}
+              {% for t in queue[:8] %}
               <tr>
                 <td>{{ loop.index }}</td>
-                <td style="font-weight:600;color:#1a56db">{{ bk.queue_number }}</td>
-                <td>{{ bk.full_name }}</td>
-                <td><span class="tag tag-amber">{{ bk.status|title }}</span></td>
+                <td style="font-weight:600;color:#1a56db">#{{ t.queue_number }}</td>
+                <td>{{ t.full_name }}</td>
+                <td>{{ t.service_name }}</td>
               </tr>
               {% endfor %}
             </tbody>
@@ -73,7 +86,6 @@
       </div>
     </div>
 
-    <!-- Stats -->
     <div class="grid-3">
       <div class="stat-card">
         <div class="stat-val" style="color:#16a34a">{{ stats.completed or 0 }}</div>
@@ -91,7 +103,7 @@
 
     {% else %}
     <div class="alert alert-warning">
-      You have no active window assignment for today. Contact your branch supervisor.
+      You have no window assignment. Contact your branch supervisor.
     </div>
     {% endif %}
   </div>

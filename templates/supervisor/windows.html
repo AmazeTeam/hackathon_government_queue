@@ -6,33 +6,38 @@
     <div class="sidebar-section">
       <div class="sidebar-lbl">Supervisor</div>
       <a href="/supervisor" class="sidebar-item">🏠 Overview</a>
-      <a href="/supervisor/windows" class="sidebar-item active">🪟 Windows</a>
+      <a href="/supervisor/windows" class="sidebar-item active">🪟 Windows & Staff</a>
+      <a href="/supervisor/reports" class="sidebar-item">📊 Reports</a>
       <a href="/logout" class="sidebar-item">🚪 Logout</a>
     </div>
   </div>
   <div class="main-area">
-    <div class="page-header"><h2>Window Management</h2><p>Open, close, and assign staff to service windows.</p></div>
-    <div class="card">
+    <div class="page-header"><h2>Window & Staff Management</h2><p>Assign windows and service qualifications.</p></div>
+
+    <div class="card mb-4">
+      <div class="card-title">Windows</div>
       <div class="table-wrap">
         <table>
           <thead>
-            <tr><th>Window</th><th>Service</th><th>Status</th><th>Assigned Staff</th><th>Actions</th></tr>
+            <tr><th>Window</th><th>Status</th><th>Assigned Staff</th><th>Actions</th></tr>
           </thead>
           <tbody>
             {% for w in windows %}
             <tr>
-              <td style="font-weight:600">{{ w.label or 'Window ' ~ w.window_number }}</td>
-              <td>{{ w.service_name or '—' }}</td>
-              <td><span class="tag {% if w.status == 'open' %}tag-green{% else %}tag-gray{% endif %}">{{ w.status|title }}</span></td>
+              <td style="font-weight:600">Window {{ w.window_number }}</td>
+              <td><span class="tag {% if w.is_open %}tag-green{% else %}tag-gray{% endif %}">{% if w.is_open %}Open{% else %}Closed{% endif %}</span></td>
               <td>{{ w.staff_name or '—' }}</td>
               <td style="display:flex;gap:6px;flex-wrap:wrap">
-                <form method="POST" action="/supervisor/window/{{ w.id }}/toggle">
-                  <button class="btn btn-sm {% if w.status == 'open' %}btn-danger{% else %}btn-success{% endif %}">
-                    {% if w.status == 'open' %}Close{% else %}Open{% endif %}
+                <form method="POST">
+                  <input type="hidden" name="action" value="toggle">
+                  <input type="hidden" name="window_id" value="{{ w.id }}">
+                  <button class="btn btn-sm {% if w.is_open %}btn-danger{% else %}btn-success{% endif %}">
+                    {% if w.is_open %}Close{% else %}Open{% endif %}
                   </button>
                 </form>
-                <!-- Assign staff -->
-                <form method="POST" action="/supervisor/window/{{ w.id }}/assign" style="display:flex;gap:4px">
+                <form method="POST" style="display:flex;gap:4px">
+                  <input type="hidden" name="action" value="assign">
+                  <input type="hidden" name="window_id" value="{{ w.id }}">
                   <select class="input" name="staff_id" style="font-size:12px;padding:4px 8px;width:130px">
                     <option value="">Assign staff…</option>
                     {% for s in staff %}
@@ -47,6 +52,39 @@
           </tbody>
         </table>
       </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Staff Service Qualifications</div>
+      {% for s in staff %}
+      <div style="padding:12px 0;border-bottom:1px solid #f3f4f6">
+        <div style="font-weight:600;margin-bottom:8px">{{ s.full_name }}</div>
+        <div style="margin-bottom:8px">
+          {% for ss in staff_services.get(s.id, []) %}
+          <span class="tag tag-blue" style="margin-right:6px">{{ ss.name }}
+            <form method="POST" style="display:inline">
+              <input type="hidden" name="action" value="remove_service">
+              <input type="hidden" name="staff_id" value="{{ s.id }}">
+              <input type="hidden" name="service_id" value="{{ ss.service_id }}">
+              <button style="background:none;border:none;color:#991b1b;cursor:pointer;margin-left:4px">×</button>
+            </form>
+          </span>
+          {% else %}
+          <span class="muted">No services assigned</span>
+          {% endfor %}
+        </div>
+        <form method="POST" style="display:flex;gap:6px">
+          <input type="hidden" name="action" value="assign_service">
+          <input type="hidden" name="staff_id" value="{{ s.id }}">
+          <select class="input" name="service_id" style="max-width:200px;font-size:12px">
+            {% for svc in services %}
+            <option value="{{ svc.id }}">{{ svc.name }}</option>
+            {% endfor %}
+          </select>
+          <button class="btn btn-sm btn-secondary">Add Service</button>
+        </form>
+      </div>
+      {% endfor %}
     </div>
   </div>
 </div>

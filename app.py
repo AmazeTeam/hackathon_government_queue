@@ -1,10 +1,9 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, g
 from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import date, datetime, timedelta
+from datetime import date, datetime
 from functools import wraps
 from db import init_db, query, execute
 import os
-import sqlite3
 
 app = Flask(__name__)
 app.secret_key = "govqueue-secret-2024"
@@ -41,13 +40,6 @@ def unread_count():
     r = query("SELECT COUNT(*) as c FROM notification WHERE user_id=? AND is_read=0", (session['user_id'],), one=True)
     return r['c'] if r else 0
 
-@app.context_processor
-def inject_globals():
-    return {'unread': unread_count()}
-
-def row_to_dict(row):
-    return {k: row[k] for k in row.keys()}
-
 def generate_queue_number(branch_service_id, slot_date):
     r = query("""SELECT COUNT(*) as c FROM booking b
                  JOIN time_slot ts ON b.time_slot_id=ts.id
@@ -56,25 +48,6 @@ def generate_queue_number(branch_service_id, slot_date):
               (branch_service_id, slot_date), one=True)
     n = (r['c'] if r else 0) + 1
     return f"Q{n:03d}"
-
-def provision_service_branches(service_id, duration_minutes):
-    """Link a service to all active branches and create bookable time slots."""
-    branches = query("SELECT id FROM branch WHERE is_active=1")
-    for branch in branches:
-        existing = query(
-            "SELECT id FROM branch_service WHERE branch_id=? AND service_id=?",
-            (branch['id'], service_id), one=True)
-        bs_id = existing['id'] if existing else execute(
-            "INSERT INTO branch_service(branch_id,service_id) VALUES(?,?)",
-            (branch['id'], service_id))
-        if query("SELECT id FROM time_slot WHERE branch_service_id=? LIMIT 1", (bs_id,), one=True):
-            continue
-        for d_off in range(3):
-            slot_date = (date.today() + timedelta(days=d_off)).isoformat()
-            for hour in range(8, 16):
-                execute(
-                    "INSERT INTO time_slot(branch_service_id,slot_date,start_time,end_time,max_capacity,booked_count) VALUES(?,?,?,?,?,?)",
-                    (bs_id, slot_date, f"{hour:02d}:00", f"{hour:02d}:{duration_minutes:02d}", 5, 0))
 
 def check_turn_notifications():
     """Create notifications for citizens who are 2 positions away."""
@@ -120,7 +93,7 @@ def index():
         JOIN service s ON bs.service_id=s.id
         LEFT JOIN time_slot ts ON ts.branch_service_id=bs.id AND ts.slot_date=?
         LEFT JOIN booking bk ON bk.time_slot_id=ts.id
-        WHERE bs.is_available=1 AND s.is_active=1
+        WHERE bs.is_available=1
         GROUP BY bs.id
     """, (today,))
     return render_template('index.html', branches=branches, services=services,
@@ -351,14 +324,11 @@ def citizen_profile():
     u = current_user()
     return render_template('citizen/profile.html', u=u, user=u, unread=unread_count())
 
-@app.route('/notifications/read', methods=['GET', 'POST'])
+@app.route('/notifications/read', methods=['POST'])
 @login_required
 def mark_notifications_read():
     execute("UPDATE notification SET is_read=1 WHERE user_id=?", (session['user_id'],))
-    if request.accept_mimetypes.best == 'application/json':
-        return jsonify({"ok": True})
-    flash("Notifications marked as read.", "success")
-    return redirect(request.referrer or url_for('dashboard'))
+    return jsonify({"ok": True})
 
 # ── Counter Staff ─────────────────────────────────────────────────────────────
 
@@ -582,37 +552,23 @@ def admin_dashboard():
 @role_required('admin')
 def admin_services():
     org = query("SELECT id FROM organization LIMIT 1", one=True)
-    if not org:
-        flash("No organization configured. Please run seed.py first.", "error")
-        return redirect(url_for('admin_dashboard'))
     if request.method == 'POST':
         action = request.form.get('action')
         if action == 'create':
-            duration = int(request.form.get('duration', 10))
-            service_id = execute(
-                "INSERT INTO service(organization_id,name,name_ar,estimated_duration_minutes) VALUES(?,?,?,?)",
-                (org['id'], request.form['name'], request.form.get('name_ar',''), duration))
-            provision_service_branches(service_id, duration)
-            flash("Service created and made available for booking.", "success")
+            execute("INSERT INTO service(organization_id,name,name_ar,estimated_duration_minutes) VALUES(?,?,?,?)",
+                    (org['id'], request.form['name'], request.form.get('name_ar',''), request.form.get('duration',10)))
+            flash("Service created.", "success")
         elif action == 'edit':
             execute("UPDATE service SET name=?, name_ar=?, estimated_duration_minutes=? WHERE id=?",
                     (request.form['name'], request.form.get('name_ar',''), request.form.get('duration',10), request.form['id']))
             flash("Service updated.", "success")
         elif action == 'delete':
-            service_id = request.form['id']
-            execute("UPDATE service SET is_active=0 WHERE id=?", (service_id,))
-            execute("UPDATE branch_service SET is_available=0 WHERE service_id=?", (service_id,))
-            flash("Service deleted.", "success")
+            execute("UPDATE service SET is_active=0 WHERE id=?", (request.form['id'],))
+            flash("Service deactivated.", "success")
         return redirect(url_for('admin_services'))
-    orphans = query("""SELECT s.id, s.estimated_duration_minutes FROM service s
-                       LEFT JOIN branch_service bs ON bs.service_id=s.id
-                       WHERE s.is_active=1 AND s.organization_id=?
-                       GROUP BY s.id HAVING COUNT(bs.id)=0""", (org['id'],))
-    for svc in orphans:
-        provision_service_branches(svc['id'], svc['estimated_duration_minutes'])
     services = query("""SELECT s.*, COUNT(DISTINCT bs.id) as branch_count
                         FROM service s LEFT JOIN branch_service bs ON bs.service_id=s.id
-                        WHERE s.organization_id=? AND s.is_active=1
+                        WHERE s.organization_id=?
                         GROUP BY s.id ORDER BY s.name""", (org['id'],))
     return render_template('admin/services.html', services=services,
                            user=current_user(), unread=unread_count())
@@ -624,24 +580,14 @@ def admin_users():
     if request.method == 'POST':
         action = request.form.get('action')
         if action == 'create':
-            phone = request.form['phone'].strip()
-            if query("SELECT id FROM user WHERE phone=?", (phone,), one=True):
-                flash("Phone number already registered.", "error")
-                return redirect(url_for('admin_users'))
-            try:
-                execute("INSERT INTO user(full_name,phone,password_hash,role,branch_id) VALUES(?,?,?,?,?)",
-                        (request.form['full_name'].strip(), phone,
-                         generate_password_hash(request.form.get('password','changeme')),
-                         request.form['role'],
-                         request.form.get('branch_id') or None))
-                flash("User created.", "success")
-            except sqlite3.IntegrityError:
-                flash("Phone number already registered.", "error")
+            execute("INSERT INTO user(full_name,phone,password_hash,role,branch_id) VALUES(?,?,?,?,?)",
+                    (request.form['full_name'], request.form['phone'],
+                     generate_password_hash(request.form.get('password','changeme')),
+                     request.form['role'],
+                     request.form.get('branch_id') or None))
+            flash("User created.", "success")
         elif action == 'toggle':
             u = query("SELECT is_active FROM user WHERE id=?", (request.form['id'],), one=True)
-            if not u:
-                flash("User not found.", "error")
-                return redirect(url_for('admin_users'))
             execute("UPDATE user SET is_active=? WHERE id=?", (0 if u['is_active'] else 1, request.form['id']))
             flash("User status updated.", "success")
         elif action == 'edit_role':
@@ -721,7 +667,7 @@ def api_queue_status(bs_id):
 def api_notifications():
     notifs = query("SELECT * FROM notification WHERE user_id=? AND is_read=0 ORDER BY sent_at DESC LIMIT 10",
                    (session['user_id'],))
-    return jsonify([row_to_dict(n) for n in notifs])
+    return jsonify([dict(n) for n in notifs])
 
 if __name__ == '__main__':
     init_db()

@@ -6,8 +6,8 @@
     <div class="sidebar-section">
       <div class="sidebar-lbl">Citizen</div>
       <a href="/citizen" class="sidebar-item">🏠 Dashboard</a>
-      <a href="/citizen/book" class="sidebar-item">📋 Book Queue</a>
-      <a href="/citizen/bookings" class="sidebar-item">📄 My Bookings</a>
+      <a href="/citizen/book" class="sidebar-item">📋 Join Queue</a>
+      <a href="/citizen/bookings" class="sidebar-item">📄 My Tickets</a>
       <a href="/citizen/track" class="sidebar-item active">🔍 Track Queue</a>
       <a href="/citizen/profile" class="sidebar-item">👤 Profile</a>
     </div>
@@ -18,54 +18,44 @@
       <a href="/citizen/track" class="btn btn-secondary btn-sm">🔄 Refresh</a>
     </div>
 
-    {% if bk %}
+    {% if active and payload %}
     <div class="card" style="text-align:center;padding:32px">
       <div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#6b7280;margin-bottom:6px">Now Serving</div>
-      <div style="font-size:60px;font-weight:700;color:#1a56db;line-height:1">{{ serving_now }}</div>
+      <div style="font-size:60px;font-weight:700;color:#1a56db;line-height:1">#{{ payload.currentServingNumber or '—' }}</div>
 
       <div style="margin:24px 0;padding:16px;background:#f9fafb;border-radius:8px;display:inline-block;min-width:200px">
         <div class="muted">Your ticket</div>
-        <div style="font-size:28px;font-weight:700;color:#111827">{{ bk.queue_number }}</div>
-        <div class="muted">{{ bk.service_name }} · {{ bk.branch_name }}</div>
+        <div style="font-size:28px;font-weight:700;color:#111827">#{{ active.queue_number }}</div>
+        <div class="muted">{{ active.service_name }} · {{ active.branch_name }}</div>
       </div>
 
       <div style="margin:16px 0">
         <span style="font-size:15px;color:#374151">
-          You are <strong style="color:#1a56db;font-size:20px">{{ position }}</strong> in queue
+          You are <strong style="color:#1a56db;font-size:20px">{{ payload.position }}</strong> in queue
         </span>
-      </div>
-
-      <div style="max-width:300px;margin:0 auto">
-        <div style="background:#e5e7eb;border-radius:20px;height:8px;overflow:hidden">
-          <div style="background:#1a56db;height:100%;border-radius:20px;width:{{ [100 - (position * 10), 5]|max }}%;transition:width 1s"></div>
-        </div>
       </div>
 
       <div style="margin-top:16px">
-        <span class="tag {% if bk.status == 'serving' %}tag-blue{% elif bk.status == 'arrived' %}tag-amber{% else %}tag-green{% endif %}">
-          Status: {{ bk.status|title }}
+        <span class="tag {% if active.status in ['Called','InProgress'] %}tag-blue{% elif active.status == 'Waiting' %}tag-amber{% else %}tag-green{% endif %}">
+          Status: {{ active.status }}
         </span>
       </div>
 
-      {% if position <= 3 %}
+      {% if payload.position <= 3 %}
       <div class="alert alert-warning" style="margin-top:16px;text-align:left">
         ⚠️ <strong>Get ready!</strong> Your turn is approaching. Please be near the service window.
       </div>
       {% endif %}
 
       <div style="margin-top:20px;color:#6b7280;font-size:12px">
-        Estimated wait: ~{{ position * bk.estimated_duration_minutes }} minutes
+        Estimated wait: ~{{ payload.estimatedWaitMinutes }} minutes
       </div>
-    </div>
-
-    <div style="margin-top:12px;text-align:center">
-      <p class="muted" style="margin-bottom:8px">This page updates on refresh. Click refresh to get latest position.</p>
     </div>
     {% else %}
     <div class="card" style="text-align:center;padding:40px">
       <div style="font-size:40px;margin-bottom:10px">🔍</div>
-      <p class="muted">No active booking to track.</p>
-      <a href="/citizen/book" class="btn btn-primary" style="margin-top:12px">Book a Slot</a>
+      <p class="muted">No active ticket to track.</p>
+      <a href="/citizen/book" class="btn btn-primary" style="margin-top:12px">Join Queue</a>
     </div>
     {% endif %}
   </div>

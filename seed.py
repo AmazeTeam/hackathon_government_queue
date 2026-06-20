@@ -1,115 +1,140 @@
-from db import init_db, execute, query
-from werkzeug.security import generate_password_hash
-from datetime import date, timedelta
+"""Seed database per docs/06_ERD.md."""
+import os
+from datetime import datetime
+
+from db import DB_PATH, execute, init_db, query
+
+ROLES = ['Citizen', 'DoorKeeper', 'CounterStaff', 'BranchSupervisor', 'SystemAdmin']
+
+
+def seed_roles():
+    for name in ROLES:
+        execute('INSERT OR IGNORE INTO role(name) VALUES(?)', (name,))
+
+
+def assign_role(user_id, role_name):
+    role = query('SELECT id FROM role WHERE name=?', (role_name,), one=True)
+    if role:
+        execute('INSERT OR IGNORE INTO user_role(user_id, role_id) VALUES(?,?)', (user_id, role['id']))
+
+
+def create_user(full_name, phone, branch_id=None):
+    ts = datetime.now().isoformat()
+    return execute(
+        'INSERT INTO user(full_name, phone_number, branch_id, created_at, updated_at) VALUES(?,?,?,?,?)',
+        (full_name, phone, branch_id, ts, ts),
+    )
+
+
+def create_branch_service(branch_id, service_id, duration):
+    bs_id = execute(
+        'INSERT INTO branch_service(branch_id, service_id, estimated_duration_minutes) VALUES(?,?,?)',
+        (branch_id, service_id, duration),
+    )
+    execute(
+        'INSERT INTO queue(branch_service_id, created_at) VALUES(?,?)',
+        (bs_id, datetime.now().isoformat()),
+    )
+    return bs_id
+
 
 def seed():
+    if os.path.exists(DB_PATH):
+        os.remove(DB_PATH)
+
     init_db()
+    seed_roles()
 
-    # Check if already seeded
-    if query("SELECT id FROM organization LIMIT 1"):
-        print("Already seeded.")
-        return
+    ts = datetime.now().isoformat()
 
-    # Organization
-    org_id = execute("INSERT INTO organization(name) VALUES(?)", ("Egyptian Government Services",))
+    b1 = execute(
+        'INSERT INTO branch(name, address, created_at) VALUES(?,?,?)',
+        ('Downtown Branch', '5 Tahrir Square, Cairo', ts),
+    )
+    b2 = execute(
+        'INSERT INTO branch(name, address, created_at) VALUES(?,?,?)',
+        ('East Branch', '12 Nasr City St, Cairo', ts),
+    )
 
-    # Branches
-    b1 = execute("INSERT INTO branch(organization_id,name,address,phone,working_hours) VALUES(?,?,?,?,?)",
-                 (org_id,"Downtown Branch","5 Tahrir Square, Cairo","+20-2-1234","08:00-16:00"))
-    b2 = execute("INSERT INTO branch(organization_id,name,address,phone,working_hours) VALUES(?,?,?,?,?)",
-                 (org_id,"East Branch","12 Nasr City St, Cairo","+20-2-5678","08:00-16:00"))
+    s1 = execute(
+        'INSERT INTO service(name, description, created_at) VALUES(?,?,?)',
+        ('Civil Registry', 'Civil registry services', ts),
+    )
+    s2 = execute(
+        'INSERT INTO service(name, description, created_at) VALUES(?,?,?)',
+        ('Driving License', 'Driving license services', ts),
+    )
+    s3 = execute(
+        'INSERT INTO service(name, description, created_at) VALUES(?,?,?)',
+        ('Tax Services', 'Tax related services', ts),
+    )
+    s4 = execute(
+        'INSERT INTO service(name, description, created_at) VALUES(?,?,?)',
+        ('Business Permits', 'Business permit services', ts),
+    )
 
-    # Services
-    s1 = execute("INSERT INTO service(organization_id,name,name_ar,estimated_duration_minutes) VALUES(?,?,?,?)",
-                 (org_id,"Civil Registry","السجل المدني",20))
-    s2 = execute("INSERT INTO service(organization_id,name,name_ar,estimated_duration_minutes) VALUES(?,?,?,?)",
-                 (org_id,"Driving License","رخصة القيادة",15))
-    s3 = execute("INSERT INTO service(organization_id,name,name_ar,estimated_duration_minutes) VALUES(?,?,?,?)",
-                 (org_id,"Tax Services","الخدمات الضريبية",10))
-    s4 = execute("INSERT INTO service(organization_id,name,name_ar,estimated_duration_minutes) VALUES(?,?,?,?)",
-                 (org_id,"Business Permits","تصاريح الأعمال",25))
+    create_branch_service(b1, s1, 20)
+    create_branch_service(b1, s2, 15)
+    create_branch_service(b1, s3, 10)
+    create_branch_service(b2, s1, 20)
+    create_branch_service(b2, s4, 25)
 
-    # Branch services
-    bs1 = execute("INSERT INTO branch_service(branch_id,service_id) VALUES(?,?)", (b1,s1))
-    bs2 = execute("INSERT INTO branch_service(branch_id,service_id) VALUES(?,?)", (b1,s2))
-    bs3 = execute("INSERT INTO branch_service(branch_id,service_id) VALUES(?,?)", (b1,s3))
-    bs4 = execute("INSERT INTO branch_service(branch_id,service_id) VALUES(?,?)", (b2,s1))
-    bs5 = execute("INSERT INTO branch_service(branch_id,service_id) VALUES(?,?)", (b2,s4))
+    for i in range(1, 4):
+        execute('INSERT INTO window(branch_id, window_number, is_open) VALUES(?,?,?)', (b1, i, 1 if i < 3 else 0))
+    for i in range(1, 3):
+        execute('INSERT INTO window(branch_id, window_number, is_open) VALUES(?,?,?)', (b2, i, 1))
 
-    # Windows
-    for i in range(1,4):
-        execute("INSERT INTO window(branch_id,service_id,window_number,label,status) VALUES(?,?,?,?,?)",
-                (b1,s1,i,f"Window {i}","open" if i<3 else "closed"))
-    for i in range(1,3):
-        execute("INSERT INTO window(branch_id,service_id,window_number,label,status) VALUES(?,?,?,?,?)",
-                (b1,s2,i,f"Window {i}","open"))
-    for i in range(1,3):
-        execute("INSERT INTO window(branch_id,service_id,window_number,label,status) VALUES(?,?,?,?,?)",
-                (b2,s1,i,f"Window {i}","open"))
+    admin_id = create_user('System Admin', '+20100000000')
+    assign_role(admin_id, 'SystemAdmin')
 
-    # Users
-    admin_id = execute(
-        "INSERT INTO user(full_name,phone,password_hash,role,is_active) VALUES(?,?,?,?,?)",
-        ("System Admin","+20100000000",generate_password_hash("admin123"),"admin",1))
+    sup1 = create_user('Laila Hassan', '+20100000001', b1)
+    assign_role(sup1, 'BranchSupervisor')
 
-    sup1_id = execute(
-        "INSERT INTO user(full_name,phone,password_hash,role,branch_id,is_active) VALUES(?,?,?,?,?,?)",
-        ("Laila Hassan","+20100000001",generate_password_hash("super123"),"supervisor",b1,1))
+    sup2 = create_user('Nour Adel', '+20100000002', b2)
+    assign_role(sup2, 'BranchSupervisor')
 
-    sup2_id = execute(
-        "INSERT INTO user(full_name,phone,password_hash,role,branch_id,is_active) VALUES(?,?,?,?,?,?)",
-        ("Nour Adel","+20100000002",generate_password_hash("super123"),"supervisor",b2,1))
+    staff1 = create_user('Ahmed Kamal', '+20100000003', b1)
+    assign_role(staff1, 'CounterStaff')
+    execute('INSERT INTO staff_service(user_id, service_id) VALUES(?,?)', (staff1, s1))
+    execute('INSERT INTO staff_service(user_id, service_id) VALUES(?,?)', (staff1, s2))
 
-    staff1_id = execute(
-        "INSERT INTO user(full_name,phone,password_hash,role,branch_id,is_active) VALUES(?,?,?,?,?,?)",
-        ("Ahmed Kamal","+20100000003",generate_password_hash("staff123"),"staff",b1,1))
+    staff2 = create_user('Sara Mahmoud', '+20100000004', b1)
+    assign_role(staff2, 'CounterStaff')
+    execute('INSERT INTO staff_service(user_id, service_id) VALUES(?,?)', (staff2, s2))
 
-    staff2_id = execute(
-        "INSERT INTO user(full_name,phone,password_hash,role,branch_id,is_active) VALUES(?,?,?,?,?,?)",
-        ("Sara Mahmoud","+20100000004",generate_password_hash("staff123"),"staff",b1,1))
+    dk = create_user('Omar Door Keeper', '+20100000005', b1)
+    assign_role(dk, 'DoorKeeper')
 
-    val_id = execute(
-        "INSERT INTO user(full_name,phone,password_hash,role,branch_id,is_active) VALUES(?,?,?,?,?,?)",
-        ("Omar Validation","+20100000005",generate_password_hash("val123"),"validation_staff",b1,1))
+    c1 = create_user('Mohamed Ahmed', '+20100000006')
+    assign_role(c1, 'Citizen')
 
-    c1_id = execute(
-        "INSERT INTO user(full_name,phone,password_hash,role,is_active) VALUES(?,?,?,?,?)",
-        ("Mohamed Ahmed","+20100000006",generate_password_hash("citizen123"),"citizen",1))
+    c2 = create_user('Fatma Ali', '+20100000007')
+    assign_role(c2, 'Citizen')
 
-    c2_id = execute(
-        "INSERT INTO user(full_name,phone,password_hash,role,is_active) VALUES(?,?,?,?,?)",
-        ("Fatma Ali","+20100000007",generate_password_hash("citizen123"),"citizen",1))
-
-    # Window assignments
-    win1 = query("SELECT id FROM window WHERE branch_id=? AND window_number=1 AND service_id=?", (b1,s1), one=True)
-    win2 = query("SELECT id FROM window WHERE branch_id=? AND window_number=2 AND service_id=?", (b1,s2), one=True)
-    today = date.today().isoformat()
+    win1 = query('SELECT id FROM window WHERE branch_id=? AND window_number=1', (b1,), one=True)
+    win2 = query('SELECT id FROM window WHERE branch_id=? AND window_number=2', (b1,), one=True)
     if win1:
-        execute("INSERT INTO window_assignment(window_id,staff_id,assigned_date,is_active) VALUES(?,?,?,?)",
-                (win1["id"],staff1_id,today,1))
+        execute(
+            'INSERT INTO staff_window(user_id, window_id, assigned_at) VALUES(?,?,?)',
+            (staff1, win1['id'], ts),
+        )
     if win2:
-        execute("INSERT INTO window_assignment(window_id,staff_id,assigned_date,is_active) VALUES(?,?,?,?)",
-                (win2["id"],staff2_id,today,1))
+        execute(
+            'INSERT INTO staff_window(user_id, window_id, assigned_at) VALUES(?,?,?)',
+            (staff2, win2['id'], ts),
+        )
 
-    # Time slots for today and tomorrow
-    for bs, svc_id, est in [(bs1,s1,20),(bs2,s2,15),(bs3,s3,10),(bs4,s1,20),(bs5,s4,25)]:
-        for d_off in range(3):
-            slot_date = (date.today() + timedelta(days=d_off)).isoformat()
-            for hour in range(8, 16):
-                execute(
-                    "INSERT INTO time_slot(branch_service_id,slot_date,start_time,end_time,max_capacity,booked_count) VALUES(?,?,?,?,?,?)",
-                    (bs, slot_date, f"{hour:02d}:00", f"{hour:02d}:{est:02d}", 5, 0))
+    print('Seeded successfully.')
+    print('\n=== LOGIN (OTP: 123456) ===')
+    print('Admin:       +20100000000')
+    print('Supervisor:  +20100000001  (Downtown)')
+    print('Supervisor:  +20100000002  (East)')
+    print('Staff:       +20100000003  (Downtown)')
+    print('Staff:       +20100000004  (Downtown)')
+    print('Door Keeper: +20100000005  (Downtown)')
+    print('Citizen:     +20100000006')
+    print('Citizen:     +20100000007')
 
-    print("Seeded successfully.")
-    print("\n=== LOGIN CREDENTIALS ===")
-    print("Admin:      +20100000000 / admin123")
-    print("Supervisor: +20100000001 / super123  (Downtown)")
-    print("Supervisor: +20100000002 / super123  (East)")
-    print("Staff:      +20100000003 / staff123  (Downtown)")
-    print("Staff:      +20100000004 / staff123  (Downtown)")
-    print("Val.Staff:  +20100000005 / val123    (Downtown)")
-    print("Citizen:    +20100000006 / citizen123")
-    print("Citizen:    +20100000007 / citizen123")
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     seed()
